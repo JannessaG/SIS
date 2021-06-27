@@ -1,8 +1,9 @@
-
 from tkinter import *
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox 
+from tempfile import NamedTemporaryFile
+import shutil
 import csv 
 
 
@@ -11,12 +12,23 @@ delete_list=[]
 search_list=[]
 search=[]
 delete_id=[]
+update=[]
+update_id=[]
+update_name=[]
+update_gender=[]
+update_course=[]
+update_year=[]
 
-def read_row(): 
+def display_read_row(): 
 	for i in tree.get_children():
 		tree.delete(i)
 	display_list.clear()
 	search_list.clear()
+	update_name.clear()
+	update_id.clear()
+	update_year.clear()
+	update_course.clear()
+	update_gender.clear()
 
 	with open('students.csv','r') as csvfile:
 		student_data =csv.reader(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
@@ -25,7 +37,7 @@ def read_row():
 		count=0
 		tuples=[]
 		for i in display_list:
-			if len(i) ==0:
+			if len(i)==0:
 				count+=1
 			elif count !=0 and (i[0]) !="" and (i[0]) !="" and (i[0]) != "" and (i[0]) != "" and (i[0]) !="":
 				index=0
@@ -70,7 +82,7 @@ def create_row():
 	
 	id.clear()
 	x.clear()
-	read_row()
+	display_read_row()
 
 def search_row(): 
 	x=entry_search.get()
@@ -98,11 +110,50 @@ def update_record():
 	selected=tree.focus()
 	tree.item(selected,text="",values=(entry_search.get(),entry_name.get(),entry_course.get(),entry_year.get(),entry_gender.get()))
 	
+	search_list.clear()
+	display_list.clear()
+	delete_list.clear()
+	update_id.clear()
+	update_name.clear()
+	update_course.clear()
+	update_year.clear()
+	update_gender.clear()
+
+	id=update[0]
+	name=entry_name.get()
+	course=entry_course.get()
+	year=entry_year.get()
+	gender=entry_gender.get()
+	
+	update_id.append(id)
+	update_name.append(name)
+	update_course.append(course)
+	update_year.append(year)
+	update_gender.append(gender)
+
+	filename='students.csv'
+	tempfile=NamedTemporaryFile(mode='w',delete=False)
+
+	fields=['ID no.','Name','Course','Year','Gender']
+
+	with open(filename,'r') as csvfile,tempfile:
+		reader=csv.DictReader(csvfile, fieldnames=fields)
+		writer=csv.DictWriter(tempfile, fieldnames=fields)
+		
+		for row in reader:
+			if row['ID no.']== str(update_id[0]):
+				row['Name'],row['Course'],row['Year'],row['Gender']=update_name[0],update_course[0],update_year[0],update_gender[0]
+			row={'ID no.':row['ID no.'],'Name':row['Name'],'Course': row['Course'],'Year':row['Year'],'Gender':row['Gender']}
+			writer.writerow(row)
+
+	shutil.move(tempfile.name,filename)
 	entry_search.delete(0,END)
 	entry_name.delete(0,END)
 	entry_gender.delete(0,END)
 	entry_course.delete(0,END)
 	entry_year.delete(0,END)
+	del_spaces()
+
 
 def remove_row():
 	a=delete_id[0]
@@ -122,7 +173,37 @@ def remove_row():
 			writer=csv.writer(writefile)
 			writer.writerows(delete_list)
 	clear()
-	read_row()
+
+
+def select_record(self):
+	delete_id.clear()
+	entry_search.delete(0,END)
+	entry_name.delete(0,END)
+	entry_gender.delete(0,END)
+	entry_course.delete(0,END)
+	entry_year.delete(0,END)
+
+	selected=tree.focus()
+	values=tree.item(selected,'values')
+	delete_id.append(values[0])
+	update.append(values[0])
+	entry_search.insert(0,values[0])
+	entry_name.insert(0,values[1])
+	entry_course.insert(0,values[2])
+	entry_year.insert(0,values[3])
+	entry_gender.insert(0,values[4])
+	entry_name.focus()
+
+def del_spaces():
+	a=[]
+	with open('students.csv','r') as readfile:
+		student_data=csv.reader(readfile)
+		for row in student_data:
+			if len(row)!=0:
+				a.append(row)
+	with open('students.csv','w') as writefile:
+		writer=csv.writer(writefile)
+		writer.writerows(a)
 
 #------------------------------BUTTON FUNCTIONS---------------------------------------------------
 def search_button(): 
@@ -174,6 +255,7 @@ def delete_button():
 	message=tk.messagebox.askquestion('Delete','Are you sure you want to delete this data? ')
 	if message=='yes':
 		remove_row()
+		del_spaces()
 		entry_name.focus()
 	else:
 		tk.messagebox.showinfo('Delete','Failed to delete')
@@ -192,29 +274,15 @@ def update_button():
 		else:
 			tk.messagebox.showinfo("","Cancelled Update")
 
-def select_record(self):
-	delete_id.clear()
-	entry_search.delete(0,END)
-	entry_name.delete(0,END)
-	entry_gender.delete(0,END)
-	entry_course.delete(0,END)
-	entry_year.delete(0,END)
-
-	selected=tree.focus()
-	values=tree.item(selected,'values')
-	delete_id.append(values[0])
-	entry_search.insert(0,values[0])
-	entry_name.insert(0,values[1])
-	entry_course.insert(0,values[2])
-	entry_year.insert(0,values[3])
-	entry_gender.insert(0,values[4])
-	entry_name.focus()
-
 
 def clear():
 	display_list.clear()
 	delete_list.clear()
 	search_list.clear()
+	update_name.clear()
+	update_course.clear()
+	update_year.clear()
+	update_gender.clear()
 	entry_search.delete(0,END)
 	entry_name.delete(0,END)
 	entry_gender.delete(0,END)
@@ -283,7 +351,7 @@ label_space1.grid(row=4,column=0)
 button_search=Button(window,text="Search",width=12,command=search_button)
 button_search.grid(row=3,column=5)
 
-button_display=Button(window,text="Display All",width=12, command=read_row)
+button_display=Button(window,text="Display All",width=12, command=display_read_row)
 button_display.grid(row=6,column=2)
 
 button_add=Button(window,text="Add",width=12,command=add_button)
